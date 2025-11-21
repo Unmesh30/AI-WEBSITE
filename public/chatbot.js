@@ -1,5 +1,7 @@
 // Chatbot Module
 // Provides AI-powered chat interface for answering questions about research entries
+// NOTE: Chat history is NOT persisted between page reloads or sessions.
+// Each page load or new login starts with a fresh, empty chat.
 
 const API_BASE_URL = window.location.origin;
 
@@ -11,7 +13,8 @@ let isProcessing = false;
 // Initialize chatbot
 function initChatbot() {
   createChatUI();
-  loadChatHistory();
+  // NOTE: We do NOT load chat history from storage
+  // Every page load starts with a fresh chat
 }
 
 // Create chat UI elements
@@ -163,8 +166,8 @@ async function sendMessage() {
     // Add bot response
     addMessage('assistant', data.message);
 
-    // Save chat history
-    saveChatHistory();
+    // NOTE: We do NOT save chat history to storage anymore
+    // Chat is only kept in memory during the current session
 
   } catch (error) {
     console.error('Chat error:', error);
@@ -294,59 +297,29 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Save chat history to localStorage
-function saveChatHistory() {
+// Clear chat history (called on sign-out and page reload)
+// This function resets the chat to a fresh state
+function clearChatHistory() {
+  // Reset messages array to empty
+  chatMessages = [];
+
+  // Clear localStorage (if any old history exists)
   try {
-    const historyToSave = chatMessages
-      .filter(msg => msg.role !== 'loading')
-      .slice(-20); // Keep last 20 messages
-    localStorage.setItem('ai_vip_chat_history', JSON.stringify(historyToSave));
+    localStorage.removeItem('ai_vip_chat_history');
   } catch (error) {
-    console.error('Error saving chat history:', error);
+    console.error('Error clearing chat history from storage:', error);
   }
-}
 
-// Load chat history from localStorage
-function loadChatHistory() {
-  try {
-    const saved = localStorage.getItem('ai_vip_chat_history');
-    if (saved) {
-      const history = JSON.parse(saved);
-      // Only restore if it's recent (within 24 hours)
-      const latestTimestamp = history[history.length - 1]?.timestamp || 0;
-      const hoursSince = (Date.now() - latestTimestamp) / (1000 * 60 * 60);
-
-      if (hoursSince < 24) {
-        chatMessages = history;
-        // Re-render messages
-        const messagesContainer = document.getElementById('chat-messages');
-        history.forEach(msg => {
-          if (msg.role !== 'loading') {
-            const messageDiv = document.createElement('div');
-            messageDiv.id = msg.id;
-            messageDiv.className = `chat-message ${msg.role === 'user' ? 'user-message' : 'bot-message'}`;
-
-            const avatar = msg.role === 'user'
-              ? '<i class="fas fa-user"></i>'
-              : '<i class="fas fa-robot"></i>';
-
-            const renderedContent = msg.role === 'assistant'
-              ? renderMarkdown(msg.content)
-              : escapeHtml(msg.content);
-
-            messageDiv.innerHTML = `
-              <div class="message-avatar">${avatar}</div>
-              <div class="message-content">${renderedContent}</div>
-            `;
-
-            messagesContainer.appendChild(messageDiv);
-          }
-        });
-      }
+  // Clear the UI - remove all messages except the welcome message
+  const messagesContainer = document.getElementById('chat-messages');
+  if (messagesContainer) {
+    // Keep only the first child (welcome message)
+    while (messagesContainer.children.length > 1) {
+      messagesContainer.removeChild(messagesContainer.lastChild);
     }
-  } catch (error) {
-    console.error('Error loading chat history:', error);
   }
+
+  console.log('Chat history cleared - starting fresh session');
 }
 
 // Initialize when DOM is ready
@@ -360,4 +333,5 @@ if (document.readyState === 'loading') {
 window.chatbot = {
   toggleChat,
   sendMessage,
+  clearChatHistory, // Exported for auth.js to call on sign-out/sign-in
 };

@@ -1,5 +1,7 @@
 // Google SSO Authentication Module
 // Manages user authentication and role-based permissions
+// NOTE: clearChatHistory() is called on sign-out and sign-in to ensure
+// each new session starts with a fresh, empty chat.
 
 const GOOGLE_CLIENT_ID = '65317156873-o4s0gqor74r2nshde0t93jakod1ktutf.apps.googleusercontent.com';
 const AUTH_STORAGE_KEY = 'ai_vip_auth';
@@ -64,6 +66,11 @@ function handleGoogleSignIn(response) {
     // Save to localStorage
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentUser));
 
+    // Clear chat history for fresh session on new sign-in
+    if (window.chatbot && typeof window.chatbot.clearChatHistory === 'function') {
+      window.chatbot.clearChatHistory();
+    }
+
     // Update UI
     updateAuthUI();
 
@@ -127,6 +134,12 @@ function signOut() {
   if (typeof google !== 'undefined' && google.accounts) {
     google.accounts.id.disableAutoSelect();
   }
+
+  // Clear chat history on sign-out
+  if (window.chatbot && typeof window.chatbot.clearChatHistory === 'function') {
+    window.chatbot.clearChatHistory();
+  }
+
   updateAuthUI();
   showNotification('You have been signed out.', 'info');
   window.dispatchEvent(new CustomEvent('authStateChanged', { detail: null }));

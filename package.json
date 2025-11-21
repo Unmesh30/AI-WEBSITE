@@ -1,0 +1,32 @@
+{
+  "name": "ai_education_vip_researachexchange",
+  "version": "1.0.0",
+  "description": "AI in Education VIP Research Exchange - A collaborative knowledge base for NYU's AI in Education VIP team",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/landfair/AI_Education_VIP_ResearachExchange.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/landfair/AI_Education_VIP_ResearachExchange/issues"
+  },
+  "homepage": "https://github.com/landfair/AI_Education_VIP_ResearachExchange#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}

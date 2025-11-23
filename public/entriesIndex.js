@@ -44,16 +44,57 @@ function buildEntriesIndex() {
       const annotation = entry.querySelector('.annotation-text');
       const annotationText = annotation ? annotation.textContent.trim() : '';
 
+      // Extract author from annotation-author div
+      const authorDiv = entry.querySelector('.annotation-author');
+      const authorText = authorDiv ? authorDiv.textContent.trim() : '';
+      // Extract just the name (before the date)
+      const authorName = authorText.split(/\d/)[0].trim();
+
       // Extract tags
       const tags = entry.getAttribute('data-tags') || '';
 
-      // Find the parent topic/subtopic for context
+      // Find the parent topic/subtopic where this entry actually exists
       let context = '';
-      const parentSubtopic = entry.closest('[id]');
-      if (parentSubtopic) {
-        const header = parentSubtopic.querySelector('.topic-page-header h1');
+      let topicId = '';
+      let subtopicId = '';
+
+      // Find the closest parent with an id (could be topic or subtopic page)
+      const parentPage = entry.closest('[id]');
+      if (parentPage) {
+        const pageId = parentPage.id;
+
+        // Get the page title for context
+        const header = parentPage.querySelector('.topic-page-header h1');
         if (header) {
           context = header.textContent.trim();
+        }
+
+        // Determine if this is a topic or subtopic page
+        // Subtopic pages typically have format: topic-subtopic (with dash in middle)
+        // Topic pages have format: topic-name
+        // We need to check if this page has a parent topic
+
+        // Check if there's a subtopic indicator by looking for onclick attributes in subtopic cards
+        const allSubtopicCards = document.querySelectorAll('.subtopic-card[onclick]');
+        let isSubtopic = false;
+
+        allSubtopicCards.forEach(card => {
+          const onclick = card.getAttribute('onclick');
+          if (onclick && onclick.includes(`'${pageId}'`)) {
+            // This page is referenced as a subtopic
+            isSubtopic = true;
+            // Extract parent topic from onclick: showSubtopicPage('parent-topic', 'subtopic')
+            const match = onclick.match(/showSubtopicPage\('([^']+)',\s*'([^']+)'\)/);
+            if (match) {
+              topicId = match[1];
+              subtopicId = match[2];
+            }
+          }
+        });
+
+        if (!isSubtopic) {
+          // This is a topic page
+          topicId = pageId;
         }
       }
 
@@ -78,8 +119,20 @@ function buildEntriesIndex() {
         context,
       ].join(' ').toLowerCase();
 
-      // Construct URL
-      const url = `${window.location.origin}${window.location.pathname}#${entryId}`;
+      // Build URL to navigate to the correct page with the entry hash
+      const basePath = window.location.pathname || '/';
+      let url;
+
+      if (subtopicId) {
+        // Entry is on a subtopic page
+        url = `${basePath}?topic=${encodeURIComponent(topicId)}&subtopic=${encodeURIComponent(subtopicId)}#${entryId}`;
+      } else if (topicId) {
+        // Entry is on a topic page
+        url = `${basePath}?topic=${encodeURIComponent(topicId)}#${entryId}`;
+      } else {
+        // Fallback: just use the hash
+        url = `${basePath}#${entryId}`;
+      }
 
       // Add to index
       entriesIndex.push({
@@ -91,6 +144,7 @@ function buildEntriesIndex() {
         citationText,
         annotationText,
         sourceUrl,
+        author: authorName,
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         context,
       });

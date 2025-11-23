@@ -10,6 +10,57 @@ let chatOpen = false;
 let chatMessages = [];
 let isProcessing = false;
 
+// Extract team member data from the page
+function getTeamMemberData() {
+  const teamData = {
+    members: [],
+    totalMembers: 0,
+    totalContributions: 0
+  };
+
+  try {
+    // Ensure team members list is populated
+    const teamMembersList = document.getElementById('team-members-list');
+    if (teamMembersList && teamMembersList.children.length === 0) {
+      // List is empty, populate it first
+      if (typeof window.populateTeamMembersList === 'function') {
+        window.populateTeamMembersList();
+      }
+    }
+
+    // Extract team member list from the page
+    if (teamMembersList) {
+      const memberElements = teamMembersList.querySelectorAll('li');
+      memberElements.forEach(el => {
+        // Find the name link (could be in <strong> for faculty or plain for students)
+        const nameLink = el.querySelector('a');
+
+        // Find the contribution count badge (span with the count number)
+        const countBadge = el.querySelector('span[style*="background-color"]');
+
+        if (nameLink && countBadge) {
+          // Extract name - strip <strong> tags if present
+          const name = nameLink.textContent.trim();
+
+          // Extract count from badge span
+          const count = parseInt(countBadge.textContent.trim()) || 0;
+
+          teamData.members.push({
+            name: name,
+            contributions: count
+          });
+          teamData.totalContributions += count;
+        }
+      });
+      teamData.totalMembers = teamData.members.length;
+    }
+  } catch (error) {
+    console.error('Error extracting team member data:', error);
+  }
+
+  return teamData;
+}
+
 // Initialize chatbot
 function initChatbot() {
   createChatUI();
@@ -123,8 +174,8 @@ async function sendMessage() {
   const loadingId = addLoadingMessage();
 
   try {
-    // Get relevant entries
-    const relevantEntries = window.entriesIndexAPI.getRelevantEntries(message, 5);
+    // Get relevant entries (increased from 5 to 10 for better context)
+    const relevantEntries = window.entriesIndexAPI.getRelevantEntries(message, 10);
 
     // Prepare entries for API
     const entries = relevantEntries.map(entry => ({
@@ -132,7 +183,11 @@ async function sendMessage() {
       title: entry.title,
       url: entry.url,
       snippet: entry.snippet,
+      author: entry.author,
     }));
+
+    // Get team member data for questions about contributors
+    const teamData = getTeamMemberData();
 
     // Prepare messages for API
     const apiMessages = chatMessages
@@ -142,7 +197,7 @@ async function sendMessage() {
         content: msg.content,
       }));
 
-    // Call API
+    // Call API with entries and team data
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
@@ -151,6 +206,7 @@ async function sendMessage() {
       body: JSON.stringify({
         messages: apiMessages,
         entries: entries,
+        teamData: teamData,
       }),
     });
 
@@ -258,7 +314,20 @@ function renderMarkdown(text) {
   let html = escapeHtml(text);
 
   // Links: [text](url)
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // IMPORTANT: Internal entry reference links must open in same tab to preserve
+  // topic/subtopic navigation context (e.g., /?topic=X&subtopic=Y#entry-id)
+  // External links (research papers, etc.) open in new tab for better UX
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+    // Check if link is internal (starts with /, ?, or #) or external (http/https)
+    const isInternal = url.startsWith('/') || url.startsWith('?') || url.startsWith('#');
+    if (isInternal) {
+      // Internal link: open in same tab to navigate to entry without resetting page
+      return `<a href="${url}">${linkText}</a>`;
+    } else {
+      // External link: open in new tab
+      return `<a href="${url}" target="_blank" rel="noopener">${linkText}</a>`;
+    }
+  });
 
   // Bold: **text**
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');

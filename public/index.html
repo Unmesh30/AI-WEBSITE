@@ -4882,6 +4882,11 @@ It also connects well with several past papers I've found that looks into prompt
                 history.pushState(navigationState, 'AI in Education VIP Research Exchange', url);
             }
 
+            // Rebuild entries index when returning to homepage
+            if (window.entriesIndexAPI && window.entriesIndexAPI.rebuildIndex) {
+                window.entriesIndexAPI.rebuildIndex();
+            }
+
             window.scrollTo(0, 0);
             updateEntryCounter();
         }
@@ -4920,6 +4925,11 @@ It also connects well with several past papers I've found that looks into prompt
                 history.pushState(navigationState, pageTitle, url);
             }
 
+            // Rebuild entries index to update URLs with new topic/subtopic context
+            if (window.entriesIndexAPI && window.entriesIndexAPI.rebuildIndex) {
+                window.entriesIndexAPI.rebuildIndex();
+            }
+
             updateBreadcrumbs();
             window.scrollTo(0, 0);
         }
@@ -4956,6 +4966,11 @@ It also connects well with several past papers I've found that looks into prompt
                 const subtopicElement = document.getElementById(subtopicId);
                 const pageTitle = subtopicElement ? subtopicElement.querySelector('.topic-page-header h1').textContent : 'Subtopic';
                 history.pushState(navigationState, pageTitle, url);
+            }
+
+            // Rebuild entries index to update URLs with new topic/subtopic context
+            if (window.entriesIndexAPI && window.entriesIndexAPI.rebuildIndex) {
+                window.entriesIndexAPI.rebuildIndex();
             }
 
             updateBreadcrumbs();

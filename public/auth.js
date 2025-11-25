@@ -207,6 +207,7 @@ function updateContributeButton() {
     if (contributeBtn) {
       contributeBtn.style.display = 'block';
       contributeBtn.disabled = false;
+      contributeBtn.innerHTML = 'Contribute';
       contributeBtn.title = 'Add new research entry';
     }
 

@@ -162,6 +162,13 @@ async function sendMessage() {
 
   if (!message || isProcessing) return;
 
+  // Check if user is logged in with NYU email
+  const currentUser = window.authModule?.getCurrentUser?.();
+  if (!currentUser || !currentUser.email || !currentUser.email.endsWith('@nyu.edu')) {
+    addMessage('assistant', 'Sorry, the chat feature is only available to verified NYU community members. Please sign in with your NYU email address to use this feature.');
+    return;
+  }
+
   // Clear input
   input.value = '';
   input.style.height = 'auto';
@@ -183,7 +190,8 @@ async function sendMessage() {
       title: entry.title,
       url: entry.url,
       snippet: entry.snippet,
-      author: entry.author,
+      paperAuthor: entry.paperAuthor,
+      contributor: entry.contributor,
     }));
 
     // Get team member data for questions about contributors
@@ -197,7 +205,7 @@ async function sendMessage() {
         content: msg.content,
       }));
 
-    // Call API with entries and team data
+    // Call API with entries, team data, and user email
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
@@ -207,10 +215,23 @@ async function sendMessage() {
         messages: apiMessages,
         entries: entries,
         teamData: teamData,
+        userEmail: currentUser.email,
       }),
     });
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        // Rate limit error
+        removeMessage(loadingId);
+        addMessage('assistant', errorData.error || 'Rate limit exceeded. Please try again later.');
+        return;
+      } else if (response.status === 403) {
+        // Not authorized
+        removeMessage(loadingId);
+        addMessage('assistant', errorData.error || 'Access denied. Please sign in with your NYU email.');
+        return;
+      }
       throw new Error(`API error: ${response.status}`);
     }
 

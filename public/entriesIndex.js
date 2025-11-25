@@ -44,11 +44,34 @@ function buildEntriesIndex() {
       const annotation = entry.querySelector('.annotation-text');
       const annotationText = annotation ? annotation.textContent.trim() : '';
 
-      // Extract author from annotation-author div
+      // Extract VIP contributor from annotation-author div
       const authorDiv = entry.querySelector('.annotation-author');
-      const authorText = authorDiv ? authorDiv.textContent.trim() : '';
+      const contributorText = authorDiv ? authorDiv.textContent.trim() : '';
       // Extract just the name (before the date)
-      const authorName = authorText.split(/\d/)[0].trim();
+      const contributorName = contributorText.split(/\d/)[0].trim();
+
+      // Extract paper author from citation text
+      // Citations typically start with author name(s)
+      // Format examples: "Smith, J. (2023)" or "Smith, J., & Jones, M. (2023)"
+      let paperAuthor = '';
+      if (citationText) {
+        // Try to extract author(s) before the year
+        // Look for pattern: Author names before (YEAR)
+        const authorMatch = citationText.match(/^([^(]+?)(?:\((\d{4})\)|\.)/);
+        if (authorMatch && authorMatch[1]) {
+          paperAuthor = authorMatch[1].trim();
+          // Limit length to avoid very long author lists
+          if (paperAuthor.length > 100) {
+            paperAuthor = paperAuthor.substring(0, 97) + '...';
+          }
+        } else {
+          // Fallback: use first part before period
+          const firstPart = citationText.split('.')[0];
+          if (firstPart && firstPart.length < 150) {
+            paperAuthor = firstPart.trim();
+          }
+        }
+      }
 
       // Extract tags
       const tags = entry.getAttribute('data-tags') || '';
@@ -119,19 +142,20 @@ function buildEntriesIndex() {
         context,
       ].join(' ').toLowerCase();
 
-      // Build URL to navigate to the correct page with the entry hash
-      const basePath = window.location.pathname || '/';
+      // Build URL with full domain as requested
+      // Format: https://AIinEducation.vip/?topic=...
+      const baseURL = 'https://AIinEducation.vip/';
       let url;
 
       if (subtopicId) {
         // Entry is on a subtopic page
-        url = `${basePath}?topic=${encodeURIComponent(topicId)}&subtopic=${encodeURIComponent(subtopicId)}#${entryId}`;
+        url = `${baseURL}?topic=${encodeURIComponent(topicId)}&subtopic=${encodeURIComponent(subtopicId)}#${entryId}`;
       } else if (topicId) {
         // Entry is on a topic page
-        url = `${basePath}?topic=${encodeURIComponent(topicId)}#${entryId}`;
+        url = `${baseURL}?topic=${encodeURIComponent(topicId)}#${entryId}`;
       } else {
-        // Fallback: just use the hash
-        url = `${basePath}#${entryId}`;
+        // Fallback: use base URL with hash
+        url = `${baseURL}#${entryId}`;
       }
 
       // Add to index
@@ -144,7 +168,8 @@ function buildEntriesIndex() {
         citationText,
         annotationText,
         sourceUrl,
-        author: authorName,
+        paperAuthor: paperAuthor,
+        contributor: contributorName,
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         context,
       });

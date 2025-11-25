@@ -81,6 +81,11 @@ function handleGoogleSignIn(response) {
       showNotification(`Welcome, ${name}! Sign in with your NYU email to contribute.`, 'info');
     }
 
+    // Show chatbot for NYU users
+    if (window.chatbot && typeof window.chatbot.showChatbotForNYUUser === 'function') {
+      window.chatbot.showChatbotForNYUUser();
+    }
+
     // Dispatch custom event for other parts of the app
     window.dispatchEvent(new CustomEvent('authStateChanged', { detail: currentUser }));
 

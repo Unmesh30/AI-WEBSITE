@@ -63,7 +63,14 @@ function getTeamMemberData() {
 
 // Initialize chatbot
 function initChatbot() {
-  createChatUI();
+  // Check if user is signed in with NYU account
+  const currentUser = window.auth?.getCurrentUser?.();
+  const hasNYUAccess = currentUser && currentUser.email && currentUser.email.endsWith('@nyu.edu');
+
+  if (hasNYUAccess) {
+    // Only create chat UI for NYU users
+    createChatUI();
+  }
   // NOTE: We do NOT load chat history from storage
   // Every page load starts with a fresh chat
 }
@@ -162,10 +169,10 @@ async function sendMessage() {
 
   if (!message || isProcessing) return;
 
-  // Check if user is logged in with NYU email
-  const currentUser = window.authModule?.getCurrentUser?.();
-  if (!currentUser || !currentUser.email || !currentUser.email.endsWith('@nyu.edu')) {
-    addMessage('assistant', 'Sorry, the chat feature is only available to verified NYU community members. Please sign in with your NYU email address to use this feature.');
+  // Get current user for API call
+  const currentUser = window.auth?.getCurrentUser?.();
+  if (!currentUser || !currentUser.email) {
+    addMessage('assistant', 'Please sign in to use the chat feature.');
     return;
   }
 
@@ -419,9 +426,21 @@ if (document.readyState === 'loading') {
   initChatbot();
 }
 
+// Function to show chatbot for NYU users after sign-in
+function showChatbotForNYUUser() {
+  const currentUser = window.auth?.getCurrentUser?.();
+  const hasNYUAccess = currentUser && currentUser.email && currentUser.email.endsWith('@nyu.edu');
+
+  // Only create chat UI if not already created and user has NYU access
+  if (hasNYUAccess && !document.getElementById('chat-button')) {
+    createChatUI();
+  }
+}
+
 // Export for global access
 window.chatbot = {
   toggleChat,
   sendMessage,
   clearChatHistory, // Exported for auth.js to call on sign-out/sign-in
+  showChatbotForNYUUser, // Exported for auth.js to call after sign-in
 };
